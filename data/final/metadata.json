@@ -1,0 +1,17 @@
+{
+  "total_samples": 4148,
+  "train_samples": 3733,
+  "val_samples": 415,
+  "sources": [
+    "Bepin Behari_Fundamentals of Vedic Astrology.pdf",
+    "VedAstro_MarriageDataset",
+    "VedAstro_Yogas",
+    "unknown",
+    "Mantreswara_s__Phaladeeplka_.pdf",
+    "Light on Life_ An Introduction to the Astrology of India - PDF Room.pdf",
+    "Astrology For The Soul PDF.pdf",
+    "VedAstro_EventDataList",
+    "vedic_astro_textbook.pdf",
+    "Uttara Kalamritam.pdf"
+  ]
+}

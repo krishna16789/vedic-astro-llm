@@ -1,0 +1,10 @@
+{
+  "total_samples": 3167,
+  "datasets": {
+    "horoscope_predictions": 617,
+    "yogas": 4,
+    "events": 2046,
+    "ml_tables": 0,
+    "marriage": 500
+  }
+}

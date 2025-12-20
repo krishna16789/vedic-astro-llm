@@ -1,0 +1,21 @@
+{
+  "total_samples": 1647,
+  "books_processed": 9,
+  "samples_per_book": {
+    "2015.406251.Brihat-Jataka_text.pdf": 0,
+    "Brihat Parasara Hora Sastra with English Translation Girish Chand Sharma Volume 1.pdf": 0,
+    "Brihat Parasara Hora Sastra with English Translation Girish Chand Sharma Volume 2.pdf": 0,
+    "Mantreswara_s__Phaladeeplka_.pdf": 217,
+    "Uttara Kalamritam.pdf": 102,
+    "Astrology For The Soul PDF.pdf": 63,
+    "Bepin Behari_Fundamentals of Vedic Astrology.pdf": 353,
+    "Light on Life_ An Introduction to the Astrology of India - PDF Room.pdf": 494,
+    "vedic_astro_textbook.pdf": 418
+  },
+  "filtering": {
+    "corrupted_text_filtered": true,
+    "sanskrit_filtered": true,
+    "metadata_filtered": true,
+    "note": "Corrupted/garbled text, Sanskrit content, and irrelevant metadata filtered out"
+  }
+}

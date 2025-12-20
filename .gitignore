@@ -26,15 +26,10 @@ env/
 ENV/
 
 # Data files
-data/raw/
-data/processed/
-data/final/
 *.csv
 *.json.gz
 
 # Model files
-training/checkpoints/
-training/logs/
 *.bin
 *.safetensors
 offload/
