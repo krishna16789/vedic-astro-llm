@@ -30,7 +30,7 @@ training:
   warmup_steps: 100
   logging_steps: 10
   save_steps: 10  # Save every 10 steps - very frequent backups!
-  eval_steps: 200  # Evaluate less often to save time
+  eval_steps: 10  # Must match save_steps for load_best_model_at_end
   eval_strategy: "steps"
   save_total_limit: 10  # Keep last 10 checkpoints
   load_best_model_at_end: true
