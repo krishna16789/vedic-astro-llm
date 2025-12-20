@@ -1,0 +1,55 @@
+# Quick Test Configuration - For MacBook Pro
+# Trains much faster with reduced dataset and simpler model
+
+model:
+  name: "mistralai/Mistral-7B-v0.1"
+  load_in_8bit: false  # Disable for faster testing on Mac
+  torch_dtype: "float32"  # Better compatibility with MPS
+
+lora:
+  r: 8  # Reduced rank for faster training
+  lora_alpha: 16
+  lora_dropout: 0.05
+  bias: "none"
+  task_type: "CAUSAL_LM"
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+
+training:
+  output_dir: "./training/checkpoints/test-run"
+  num_train_epochs: 1  # Just 1 epoch for testing
+  per_device_train_batch_size: 1  # Smaller batches
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 2  # Less accumulation
+  learning_rate: 2.0e-4
+  warmup_steps: 10  # Fewer warmup steps
+  logging_steps: 1  # Log every step to see progress
+  save_steps: 50  # Save less frequently
+  eval_steps: 50
+  eval_strategy: "steps"
+  save_total_limit: 2
+  load_best_model_at_end: false  # Skip for speed
+  
+  # Optimization
+  fp16: false  # MPS doesn't fully support fp16 training
+  optim: "adamw_torch"  # Standard optimizer for Mac
+  gradient_checkpointing: false  # Disable for speed
+  max_grad_norm: 1.0
+  
+  # Memory optimization
+  max_seq_length: 512  # Much shorter sequences
+  
+  # Logging
+  report_to: ["tensorboard"]
+  logging_dir: "./training/logs"
+
+data:
+  train_file: "./data/final/train.json"
+  validation_file: "./data/final/validation.json"
+  max_train_samples: 100  # Use only 100 samples for testing!
+  max_eval_samples: 20
+
+tokenizer:
+  padding_side: "right"
+  add_eos_token: true
