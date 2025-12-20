@@ -29,10 +29,10 @@ training:
   learning_rate: 2.0e-4
   warmup_steps: 100
   logging_steps: 10
-  save_steps: 500
-  eval_steps: 500
+  save_steps: 10  # Save every 10 steps - very frequent backups!
+  eval_steps: 200  # Evaluate less often to save time
   eval_strategy: "steps"
-  save_total_limit: 2  # Keep only 2 checkpoints to save disk space
+  save_total_limit: 10  # Keep last 10 checkpoints
   load_best_model_at_end: true
   metric_for_best_model: "eval_loss"
   greater_is_better: false
