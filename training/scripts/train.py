@@ -31,8 +31,24 @@ class ModelArguments:
         metadata={"help": "Path to pretrained model"}
     )
     use_8bit: bool = field(
-        default=True,
+        default=False,
         metadata={"help": "Load model in 8-bit mode"}
+    )
+    use_4bit: bool = field(
+        default=False,
+        metadata={"help": "Load model in 4-bit mode (QLoRA)"}
+    )
+    bnb_4bit_compute_dtype: str = field(
+        default="float16",
+        metadata={"help": "Compute dtype for 4-bit base models"}
+    )
+    bnb_4bit_quant_type: str = field(
+        default="nf4",
+        metadata={"help": "Quantization type (fp4 or nf4)"}
+    )
+    bnb_4bit_use_double_quant: bool = field(
+        default=True,
+        metadata={"help": "Use nested quantization for 4-bit"}
     )
 
 
@@ -91,7 +107,20 @@ class VedicAstroTrainer:
         bnb_config = None
         device_map = None
         
-        if self.model_args.use_8bit and has_cuda:
+        if self.model_args.use_4bit and has_cuda:
+            # 4-bit quantization (QLoRA) - uses less memory
+            bnb_config = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=getattr(torch, self.model_args.bnb_4bit_compute_dtype),
+                bnb_4bit_quant_type=self.model_args.bnb_4bit_quant_type,
+                bnb_4bit_use_double_quant=self.model_args.bnb_4bit_use_double_quant,
+            )
+            device_map = "auto"
+            print("✓ Using 4-bit quantization (QLoRA)")
+            print(f"  - Compute dtype: {self.model_args.bnb_4bit_compute_dtype}")
+            print(f"  - Quant type: {self.model_args.bnb_4bit_quant_type}")
+        elif self.model_args.use_8bit and has_cuda:
+            # 8-bit quantization
             bnb_config = BitsAndBytesConfig(
                 load_in_8bit=True,
                 llm_int8_threshold=6.0,
@@ -143,7 +172,7 @@ class VedicAstroTrainer:
         print(f"✓ Loaded model: {self.model_args.model_name}")
         
         # Prepare for k-bit training (only if using quantization)
-        if self.model_args.use_8bit and has_cuda:
+        if (self.model_args.use_4bit or self.model_args.use_8bit) and has_cuda:
             model = prepare_model_for_kbit_training(model)
             print("✓ Prepared model for k-bit training")
         
@@ -321,7 +350,11 @@ def main():
     # Create arguments
     model_args = ModelArguments(
         model_name=config["model"]["name"],
-        use_8bit=config["model"].get("load_in_8bit", True),
+        use_8bit=config["model"].get("load_in_8bit", False),
+        use_4bit=config["model"].get("load_in_4bit", False),
+        bnb_4bit_compute_dtype=config["model"].get("bnb_4bit_compute_dtype", "float16"),
+        bnb_4bit_quant_type=config["model"].get("bnb_4bit_quant_type", "nf4"),
+        bnb_4bit_use_double_quant=config["model"].get("bnb_4bit_use_double_quant", True),
     )
     
     data_args = DataArguments(
