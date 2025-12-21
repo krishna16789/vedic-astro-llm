@@ -299,12 +299,25 @@ class VedicAstroTrainer:
             eval_dataset=tokenized_datasets["validation"],
         )
         
+        # Check for existing checkpoints to resume from
+        checkpoint_dir = Path(self.training_args.output_dir)
+        checkpoints = list(checkpoint_dir.glob("checkpoint-*"))
+        
+        resume_from_checkpoint = None
+        if checkpoints:
+            # Sort by checkpoint number and get the latest
+            latest_checkpoint = max(checkpoints, key=lambda x: int(x.name.split("-")[-1]))
+            resume_from_checkpoint = str(latest_checkpoint)
+            print("\n" + "=" * 60)
+            print(f"🔄 RESUMING from checkpoint: {latest_checkpoint.name}")
+            print("=" * 60 + "\n")
+        
         # Train
         print("\n" + "=" * 60)
         print("Training Started")
         print("=" * 60 + "\n")
         
-        trainer.train()
+        trainer.train(resume_from_checkpoint=resume_from_checkpoint)
         
         # Save final model
         print("\n" + "=" * 60)
