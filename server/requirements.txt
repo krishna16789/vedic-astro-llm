@@ -1,0 +1,17 @@
+# Flask web framework
+flask==3.0.0
+flask-cors==4.0.0
+
+# PyTorch and Transformers for local model
+torch>=2.0.0
+transformers>=4.35.0
+accelerate>=0.24.0
+
+# For efficient quantization (reduces memory usage by 75%)
+bitsandbytes>=0.41.0
+
+# Swiss Ephemeris for astronomical calculations
+pyswisseph==2.10.3.2
+
+# Additional utilities
+python-dateutil==2.8.2

@@ -21,6 +21,9 @@ class PlanetPosition:
     degree_in_sign: float
     nakshatra: str
     nakshatra_pada: int
+    is_retrograde: bool = False
+    is_combust: bool = False
+    combustion_distance: float = 0.0
 
 
 class VedicEphemeris:
@@ -72,20 +75,27 @@ class VedicEphemeris:
             dt.hour + dt.minute/60.0 + dt.second/3600.0
         )
     
-    def get_planet_position(self, planet_name: str, jd: float) -> PlanetPosition:
-        """Get planet position at Julian Day"""
+    def get_planet_position(self, planet_name: str, jd: float, sun_longitude: float = None) -> PlanetPosition:
+        """Get planet position at Julian Day
+        
+        Args:
+            planet_name: Name of the planet
+            jd: Julian Day
+            sun_longitude: Sun's longitude (for combustion calculation)
+        """
         if planet_name not in self.PLANETS:
             raise ValueError(f"Unknown planet: {planet_name}")
         
         planet_id = self.PLANETS[planet_name]
         
-        # Calculate position (sidereal)
-        result = swe.calc_ut(jd, planet_id, swe.FLG_SIDEREAL)
+        # Calculate position (sidereal) with speed
+        # FLG_SIDEREAL for sidereal zodiac, FLG_SPEED for velocity calculation
+        result = swe.calc_ut(jd, planet_id, swe.FLG_SIDEREAL | swe.FLG_SPEED)
         
         longitude = result[0][0]  # Nirayana longitude
         latitude = result[0][1]
         distance = result[0][2]
-        speed = result[0][3]
+        speed = result[0][3]  # Speed in longitude (degrees per day)
         
         # Handle Ketu (180° from Rahu)
         if planet_name == 'Ketu':
@@ -103,6 +113,21 @@ class VedicEphemeris:
         # Calculate pada (quarter of nakshatra)
         pada = int((longitude % 13.333333333) / 3.333333333) + 1
         
+        # Detect retrograde motion
+        # Rahu and Ketu are ALWAYS retrograde by their very nature
+        # For other planets, check if speed is negative
+        if planet_name in ['Rahu', 'Ketu']:
+            is_retrograde = True
+        else:
+            is_retrograde = speed < 0
+        
+        # Calculate combustion if Sun longitude is provided
+        is_combust = False
+        combustion_distance = 0.0
+        if sun_longitude is not None and planet_name not in ['Sun', 'Rahu', 'Ketu']:
+            combustion_distance = self._calculate_angular_distance(longitude, sun_longitude)
+            is_combust = self._is_combust(planet_name, combustion_distance)
+        
         return PlanetPosition(
             planet=planet_name,
             longitude=longitude,
@@ -112,37 +137,110 @@ class VedicEphemeris:
             sign=sign,
             degree_in_sign=degree_in_sign,
             nakshatra=nakshatra,
-            nakshatra_pada=pada
+            nakshatra_pada=pada,
+            is_retrograde=is_retrograde,
+            is_combust=is_combust,
+            combustion_distance=combustion_distance
         )
     
+    def _calculate_angular_distance(self, lon1: float, lon2: float) -> float:
+        """Calculate shortest angular distance between two longitudes"""
+        diff = abs(lon1 - lon2)
+        if diff > 180:
+            diff = 360 - diff
+        return diff
+    
+    def _is_combust(self, planet_name: str, distance: float) -> bool:
+        """Check if planet is combust (too close to Sun)
+        
+        Combustion distances (degrees from Sun):
+        - Moon: 12°
+        - Mars: 17°
+        - Mercury: 14° (12° when retrograde)
+        - Jupiter: 11°
+        - Venus: 10° (8° when retrograde)
+        - Saturn: 15°
+        """
+        combustion_orbs = {
+            'Moon': 12.0,
+            'Mars': 17.0,
+            'Mercury': 14.0,
+            'Jupiter': 11.0,
+            'Venus': 10.0,
+            'Saturn': 15.0
+        }
+        
+        orb = combustion_orbs.get(planet_name, 0)
+        return distance <= orb if orb > 0 else False
+    
     def get_all_planets(self, dt: datetime) -> Dict[str, PlanetPosition]:
-        """Get positions of all planets"""
+        """Get positions of all planets with retrograde and combustion detection"""
         jd = self.get_julian_day(dt)
         
+        # First, get Sun's position for combustion calculations
+        sun_pos = self.get_planet_position('Sun', jd)
+        sun_longitude = sun_pos.longitude
+        
+        # Get all planet positions with combustion check
         positions = {}
         for planet_name in self.PLANETS.keys():
-            positions[planet_name] = self.get_planet_position(planet_name, jd)
+            positions[planet_name] = self.get_planet_position(planet_name, jd, sun_longitude)
         
         return positions
     
     def get_ascendant(self, dt: datetime, lat: float, lon: float) -> float:
-        """Calculate ascendant (Lagna)"""
+        """Calculate Ascendant (Lagna) in sidereal zodiac
+        
+        IMPORTANT: dt must be in UTC time for Swiss Ephemeris calculations
+        
+        When using FLG_SIDEREAL flag:
+        - ascmc[0] gives the actual ascendant degree (sidereal)
+        - cusps[1] gives House 1 cusp which may differ from ascendant
+        """
         jd = self.get_julian_day(dt)
         
-        # Calculate houses
-        houses = swe.houses_ex(jd, lat, lon, b'P')  # Placidus system
-        ascendant = houses[1][0]  # First house cusp (sidereal)
+        # Set sidereal mode before calling houses
+        swe.set_sid_mode(self.AYANAMSA)
         
-        return ascendant
+        # Call houses_ex with SIDEREAL flag
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, b'P', swe.FLG_SIDEREAL)
+        
+        # ascmc[0] is the ascendant (already in sidereal zodiac)
+        # Note: cusps[1] is House 1 cusp which can differ from ascendant
+        ascendant_sidereal = ascmc[0]
+        
+        return ascendant_sidereal
     
     def get_house_cusps(self, dt: datetime, lat: float, lon: float) -> List[float]:
-        """Get all 12 house cusps"""
+        """Get all 12 house cusps in sidereal zodiac using Placidus system
+        
+        IMPORTANT: dt must be in UTC time for Swiss Ephemeris calculations
+        
+        Returns a list of 12 house cusp longitudes (houses 1-12)
+        """
         jd = self.get_julian_day(dt)
         
-        houses = swe.houses_ex(jd, lat, lon, b'P')
-        cusps = houses[0][:12]  # 12 house cusps
+        # Set sidereal mode before calling houses
+        swe.set_sid_mode(self.AYANAMSA)
         
-        return cusps
+        # Get sidereal houses using Placidus system
+        # cusps is a tuple with indices 0-12 (13 elements)
+        # Index 0 is unused, indices 1-12 are the 12 house cusps
+        cusps, ascmc = swe.houses_ex(jd, lat, lon, b'P', swe.FLG_SIDEREAL)
+        
+        # Convert tuple to list and extract houses 1-12
+        # Swiss Ephemeris returns cusps[0] as unused, cusps[1-12] as the 12 houses
+        house_list = list(cusps)
+        
+        # Return only the 12 house cusps (skip index 0)
+        if len(house_list) >= 13:
+            return house_list[1:13]
+        else:
+            # Fallback: take all elements from index 1 onwards and pad if needed
+            result = house_list[1:]
+            while len(result) < 12:
+                result.append(0.0)  # Pad with zeros if somehow we have fewer cusps
+            return result[:12]  # Ensure exactly 12 elements
     
     def get_chart_data(
         self, 
@@ -178,7 +276,10 @@ class VedicEphemeris:
                     'degree_in_sign': pos.degree_in_sign,
                     'nakshatra': pos.nakshatra,
                     'pada': pos.nakshatra_pada,
-                    'speed': pos.speed
+                    'speed': pos.speed,
+                    'is_retrograde': pos.is_retrograde,
+                    'is_combust': pos.is_combust,
+                    'combustion_distance': pos.combustion_distance
                 }
                 for name, pos in planets.items()
             },

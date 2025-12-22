@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vedic Astrology LLM</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Chat Interface */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+
+        .message.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+        }
+
+        .message.assistant {
+            background: white;
+            border: 1px solid #e0e0e0;
+        }
+
+        .message.system {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            max-width: 100%;
+            text-align: center;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+
+        /* Chart Calculator */
+        .calculator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .location-search {
+            position: relative;
+        }
+
+        .location-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .location-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .location-item:hover {
+            background: #f8f9fa;
+        }
+
+        .location-item:last-child {
+            border-bottom: none;
+        }
+
+        .chart-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chart-results h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .planet-info {
+            background: white;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .planet-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .planet-details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        /* Rasi Chart */
+        .rasi-chart-container {
+            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .rasi-chart {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 120px);
+            gap: 2px;
+            background: #333;
+            border: 2px solid #333;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .rasi-house {
+            background: #fff;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            font-size: 0.85rem;
+        }
+
+        .house-number {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-weight: bold;
+            color: #999;
+            font-size: 0.7rem;
+        }
+
+        .house-sign {
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+        }
+
+        .house-planets {
+            text-align: center;
+            font-size: 0.75rem;
+            color: #333;
+        }
+
+        .planet-symbol {
+            display: inline-block;
+            margin: 2px;
+            padding: 2px 4px;
+            background: #e3f2fd;
+            border-radius: 3px;
+        }
+
+        .ascendant-marker {
+            color: #f44336;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+
+        .status-ok {
+            background: #28a745;
+        }
+
+        .status-warning {
+            background: #ffc107;
+        }
+
+        @media (max-width: 768px) {
+            .calculator-grid {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .tabs {
+                flex-direction: column;
+            }
+
+            .rasi-chart {
+                grid-template-rows: repeat(4, 100px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🌟 Vedic Astrology LLM</h1>
+            <p>AI-Powered Vedic Astrology Consultation & Chart Calculator</p>
+            <div style="margin-top: 10px; font-size: 0.9rem;">
+                <span id="mistral-status"></span>
+                <span id="ephemeris-status"></span>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('chat')">💬 Chat with AI</button>
+            <button class="tab" onclick="switchTab('calculator')">📊 Chart Calculator</button>
+            <button class="tab" onclick="switchTab('rasi')">🔮 Rasi Chart (D1)</button>
+        </div>
+
+        <!-- Chat Tab -->
+        <div id="chat-tab" class="tab-content active">
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">
+                        Welcome! Ask me anything about Vedic astrology, planetary positions, nakshatras, or birth chart analysis.
+                    </div>
+                </div>
+                <div class="chat-input-container">
+                    <input 
+                        type="text" 
+                        class="chat-input" 
+                        id="chat-input" 
+                        placeholder="Ask about Vedic astrology..."
+                        onkeypress="handleChatKeyPress(event)"
+                    >
+                    <button class="btn" id="send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Calculator Tab -->
+        <div id="calculator-tab" class="tab-content">
+            <div class="calculator-grid">
+                <div>
+                    <h2 style="margin-bottom: 20px; color: #667eea;">Birth Details</h2>
+                    <form onsubmit="calculateChart(event)">
+                        <div class="form-group location-search">
+                            <label for="location-search">Birth Place</label>
+                            <input 
+                                type="text" 
+                                id="location-search"
+                                placeholder="Search for city..."
+                                oninput="searchLocation(this.value)"
+                            >
+                            <div id="location-results" class="location-results" style="display: none;"></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="datetime">Date & Time (Local Time)</label>
+                            <input
+                                type="datetime-local"
+                                id="datetime"
+                                required
+                                value="1990-01-01T10:30"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="timezone">Timezone Offset from UTC</label>
+                            <select id="timezone" class="form-control" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                                <option value="5.5" selected>IST (UTC+5:30)</option>
+                                <option value="0">GMT/UTC (UTC+0:00)</option>
+                                <option value="-5">EST (UTC-5:00)</option>
+                                <option value="-6">CST (UTC-6:00)</option>
+                                <option value="-7">MST (UTC-7:00)</option>
+                                <option value="-8">PST (UTC-8:00)</option>
+                                <option value="1">CET (UTC+1:00)</option>
+                                <option value="8">CST China (UTC+8:00)</option>
+                                <option value="9">JST (UTC+9:00)</option>
+                                <option value="10">AEST (UTC+10:00)</option>
+                            </select>
+                            <small style="color: #666; display: block; margin-top: 5px;">
+                                Select the timezone of the birth time. Auto-detected: <span id="detected-tz"></span>
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="latitude">Latitude</label>
+                            <input 
+                                type="number" 
+                                id="latitude" 
+                                step="0.0001" 
+                                required
+                                placeholder="e.g., 28.6139 (Delhi)"
+                                value="28.6139"
+                            >
+                        </div>
+                        <div class="form-group">
+                            <label for="longitude">Longitude</label>
+                            <input 
+                                type="number" 
+                                id="longitude" 
+                                step="0.0001" 
+                                required
+                                placeholder="e.g., 77.2090 (Delhi)"
+                                value="77.2090"
+                            >
+                        </div>
+                        <button type="submit" class="btn" id="calc-btn" style="width: 100%;">
+                            Calculate Chart
+                        </button>
+                    </form>
+                </div>
+                <div>
+                    <h2 style="margin-bottom: 20px; color: #667eea;">Chart Results</h2>
+                    <div class="chart-results" id="chart-results">
+                        <p style="color: #999; text-align: center; padding: 50px 0;">
+                            Enter birth details and click "Calculate Chart" to see planetary positions
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rasi Chart Tab -->
+        <div id="rasi-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Rasi Chart (D1) - South Indian Style</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-small" onclick="generateRasiChart()">Generate Chart</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    Calculate chart first in the Chart Calculator tab, then click Generate Chart
+                </p>
+            </div>
+            <div id="rasi-chart-display">
+                <p style="color: #999; text-align: center; padding: 50px 0;">
+                    Calculate a birth chart first, then generate the Rasi chart visualization
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chatHistory = [];
+        let currentChartData = null;
+        let currentInputData = null;  // Store original input for Rasi chart
+        let searchTimeout = null;
+
+        // Check server health on load
+        window.addEventListener('load', checkHealth);
+
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health');
+                const data = await response.json();
+                
+                const mistralStatus = document.getElementById('mistral-status');
+                const ephemerisStatus = document.getElementById('ephemeris-status');
+                
+                mistralStatus.innerHTML = data.model_loaded
+                    ? `<span class="status-indicator status-ok"></span>Mistral 7B: Loaded (${data.device})`
+                    : '<span class="status-indicator status-warning"></span>Mistral 7B: Loading...';
+                    
+                ephemerisStatus.innerHTML = data.ephemeris_available
+                    ? '<span class="status-indicator status-ok"></span>Calculations: Ready'
+                    : '<span class="status-indicator status-warning"></span>Calculations: Unavailable';
+                    
+            } catch (error) {
+                console.error('Health check failed:', error);
+            }
+        }
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            const messagesContainer = document.getElementById('chat-messages');
+            const sendBtn = document.getElementById('send-btn');
+
+            // Add user message
+            addMessage('user', message);
+            input.value = '';
+            chatHistory.push({ role: 'user', content: message });
+
+            // Disable input while processing
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="loading"></span>';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        history: chatHistory
+                    })
+                });
+
+                const data = await response.json();
+                
+                // Add assistant response
+                addMessage('assistant', data.response);
+                chatHistory.push({ role: 'assistant', content: data.response });
+
+                if (data.using_mock) {
+                    addMessage('system', '⚠️ Running in mock mode or model still loading.');
+                }
+
+            } catch (error) {
+                addMessage('system', '❌ Error: ' + error.message);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = 'Send';
+            }
+        }
+
+        function addMessage(role, content) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}`;
+            messageDiv.textContent = content;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function searchLocation(query) {
+            clearTimeout(searchTimeout);
+            
+            const resultsDiv = document.getElementById('location-results');
+            
+            if (!query || query.length < 3) {
+                resultsDiv.style.display = 'none';
+                return;
+            }
+
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const response = await fetch(`/api/search-location?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    
+                    if (data.locations && data.locations.length > 0) {
+                        resultsDiv.innerHTML = data.locations.map(loc => `
+                            <div class="location-item" onclick="selectLocation(${loc.latitude}, ${loc.longitude}, '${loc.name.replace(/'/g, "\\'")}')">
+                                ${loc.name}
+                            </div>
+                        `).join('');
+                        resultsDiv.style.display = 'block';
+                    } else {
+                        resultsDiv.style.display = 'none';
+                    }
+                } catch (error) {
+                    console.error('Location search error:', error);
+                }
+            }, 500);
+        }
+
+        function selectLocation(lat, lon, name) {
+            document.getElementById('latitude').value = lat.toFixed(4);
+            document.getElementById('longitude').value = lon.toFixed(4);
+            document.getElementById('location-search').value = name;
+            document.getElementById('location-results').style.display = 'none';
+        }
+
+        // Hide location results when clicking outside
+        document.addEventListener('click', function(event) {
+            const searchBox = document.querySelector('.location-search');
+            if (searchBox && !searchBox.contains(event.target)) {
+                document.getElementById('location-results').style.display = 'none';
+            }
+        });
+
+        // Auto-detect timezone on page load
+        window.addEventListener('load', function() {
+            const offset = -new Date().getTimezoneOffset() / 60;
+            document.getElementById('detected-tz').textContent = `UTC${offset >= 0 ? '+' : ''}${offset}`;
+            
+            // Try to select the detected timezone
+            const tzSelect = document.getElementById('timezone');
+            const matchingOption = Array.from(tzSelect.options).find(opt =>
+                parseFloat(opt.value) === offset
+            );
+            if (matchingOption) {
+                tzSelect.value = matchingOption.value;
+            }
+        });
+
+        async function calculateChart(event) {
+            event.preventDefault();
+            
+            const datetime = document.getElementById('datetime').value;
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+            const timezoneOffset = parseFloat(document.getElementById('timezone').value);
+            const resultsDiv = document.getElementById('chart-results');
+            const calcBtn = document.getElementById('calc-btn');
+
+            calcBtn.disabled = true;
+            calcBtn.innerHTML = '<span class="loading"></span> Calculating...';
+
+            try {
+                const response = await fetch('/api/calculate-chart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        datetime: datetime,
+                        latitude: latitude,
+                        longitude: longitude,
+                        timezone_offset: timezoneOffset
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentChartData = data.chart;
+                    // Store original input data for Rasi chart generation
+                    currentInputData = {
+                        datetime: datetime,
+                        latitude: latitude,
+                        longitude: longitude,
+                        timezone_offset: timezoneOffset
+                    };
+                    displayChartResults(data.chart);
+                } else {
+                    resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            } finally {
+                calcBtn.disabled = false;
+                calcBtn.innerHTML = 'Calculate Chart';
+            }
+        }
+
+        function displayChartResults(chart) {
+            const resultsDiv = document.getElementById('chart-results');
+            
+            let html = `
+                <h3>📍 Chart Information</h3>
+                <div class="planet-info">
+                    <div class="planet-name">Ascendant (Lagna)</div>
+                    <div class="planet-details">
+                        ${chart.ascendant.sign} ${chart.ascendant.degree_in_sign.toFixed(2)}°
+                    </div>
+                </div>
+
+                <h3 style="margin-top: 20px;">🌟 Planetary Positions</h3>
+            `;
+
+            for (const [planet, data] of Object.entries(chart.planets)) {
+                const retrogradeSymbol = data.is_retrograde ? ' ℞' : '';
+                const combustSymbol = data.is_combust ? ' 🔥' : '';
+                const direction = data.speed >= 0 ? '→' : '←';
+                
+                html += `
+                    <div class="planet-info">
+                        <div class="planet-name">${planet}${retrogradeSymbol}${combustSymbol}</div>
+                        <div class="planet-details">
+                            ${data.sign} ${data.degree_in_sign.toFixed(2)}° •
+                            ${data.nakshatra} (Pada ${data.pada})<br>
+                            Speed: ${direction} ${Math.abs(data.speed).toFixed(4)}°/day
+                            ${data.is_retrograde ? ' (Retrograde)' : ''}
+                            ${data.is_combust ? ` (Combust: ${data.combustion_distance.toFixed(2)}° from Sun)` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            resultsDiv.innerHTML = html;
+        }
+
+        async function generateRasiChart() {
+            if (!currentChartData || !currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const displayDiv = document.getElementById('rasi-chart-display');
+            displayDiv.innerHTML = '<p style="text-align: center;">Generating chart...</p>';
+
+            try {
+                const response = await fetch('/api/generate-rasi-chart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(currentInputData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayRasiChart(data);
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+
+            } catch (error) {
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayRasiChart(chartData) {
+            const displayDiv = document.getElementById('rasi-chart-display');
+            
+            // South Indian chart: SIGN positions in grid (fixed layout)
+            // Layout shows which SIGN NUMBER is in each grid position
+            // Sign 1 = Aries, Sign 2 = Taurus, ... Sign 12 = Pisces
+            const signLayout = [
+                12, 1, 2, 3,     // Row 1
+                11, 0, 0, 4,     // Row 2 (0 means empty middle cells)
+                10, 0, 0, 5,     // Row 3 (0 means empty middle cells)
+                9, 8, 7, 6       // Row 4
+            ];
+            
+            let html = `
+                <div class="rasi-chart-container">
+                    <h3 style="text-align: center; margin-bottom: 15px;">
+                        Ascendant: ${chartData.ascendant.sign} ${chartData.ascendant.degree.toFixed(2)}°
+                    </h3>
+                    <div class="rasi-chart">
+            `;
+
+            // Build the chart grid
+            for (let i = 0; i < 16; i++) {
+                const signNum = signLayout[i];
+                
+                // Handle empty cells (middle positions)
+                if (signNum === 0) {
+                    html += `<div class="rasi-house" style="background: #f5f5f5; border: none;"></div>`;
+                    continue;
+                }
+                
+                const sign = chartData.signs[signNum];
+                const planets = sign.planets || [];
+                const hasAscendant = sign.has_ascendant;
+                
+                html += `
+                    <div class="rasi-house">
+                        <div class="house-number">${signNum}</div>
+                        <div class="house-sign">${sign.sign}</div>
+                        <div class="house-planets">
+                            ${hasAscendant ? '<span class="planet-symbol ascendant-marker" title="Ascendant">ASC</span> ' : ''}
+                            ${planets.map(p => {
+                                const prefix = p.name.substring(0, 2).toUpperCase();
+                                const retrograde = p.is_retrograde ? '℞' : '';
+                                const combust = p.is_combust ? '🔥' : '';
+                                const title = `${p.name} ${p.degree.toFixed(2)}°${p.is_retrograde ? ' (Retrograde)' : ''}${p.is_combust ? ' (Combust)' : ''}`;
+                                return `<span class="planet-symbol" title="${title}">${prefix}${retrograde}${combust}</span>`;
+                            }).join(' ')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                    </div>
+                    <div style="margin-top: 20px; font-size: 0.9rem;">
+                        <h4>Legend:</h4>
+                        <p><strong>Planet Abbreviations:</strong> ASC = Ascendant, SU = Sun, MO = Moon, MA = Mars, ME = Mercury,
+                           JU = Jupiter, VE = Venus, SA = Saturn, RA = Rahu, KE = Ketu</p>
+                        <p><strong>Special Symbols:</strong> ℞ = Retrograde, 🔥 = Combust</p>
+                        <p><strong>Chart Layout:</strong> South Indian Rasi Chart (D1) - Signs are in fixed positions</p>
+                        <p><strong>Sign Numbers:</strong> 1=Aries, 2=Taurus, 3=Gemini, 4=Cancer, 5=Leo, 6=Virgo,
+                           7=Libra, 8=Scorpio, 9=Sagittarius, 10=Capricorn, 11=Aquarius, 12=Pisces</p>
+                        <p>Layout: Row 1: 12,1,2,3 | Row 2: 11,4 | Row 3: 10,5 | Row 4: 9,8,7,6</p>
+                    </div>
+                </div>
+            `;
+
+            displayDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
