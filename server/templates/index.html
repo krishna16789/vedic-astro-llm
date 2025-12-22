@@ -398,6 +398,8 @@
             <button class="tab active" onclick="switchTab('chat')">💬 Chat with AI</button>
             <button class="tab" onclick="switchTab('calculator')">📊 Chart Calculator</button>
             <button class="tab" onclick="switchTab('rasi')">🔮 Rasi Chart (D1)</button>
+            <button class="tab" onclick="switchTab('divisional')">📐 Divisional Charts</button>
+            <button class="tab" onclick="switchTab('saved')">💾 Saved Charts</button>
         </div>
 
         <!-- Chat Tab -->
@@ -486,8 +488,11 @@
                                 value="77.2090"
                             >
                         </div>
-                        <button type="submit" class="btn" id="calc-btn" style="width: 100%;">
+                        <button type="submit" class="btn" id="calc-btn" style="width: 100%; margin-bottom: 10px;">
                             Calculate Chart
+                        </button>
+                        <button type="button" class="btn" onclick="saveCurrentChart()" style="width: 100%; background: #28a745;">
+                            💾 Save Chart
                         </button>
                     </form>
                 </div>
@@ -517,6 +522,51 @@
                 </p>
             </div>
         </div>
+
+        <!-- Divisional Charts Tab -->
+        <div id="divisional-tab" class="tab-content">
+                <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Divisional Charts (Vargas)</h2>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <p style="color: #666; font-size: 0.9rem;">
+                        Calculate a birth chart first, then select a divisional chart
+                    </p>
+                    <div style="margin: 20px 0;">
+                        <select id="varga-select" style="padding: 10px; font-size: 1rem; border-radius: 8px; border: 2px solid #e0e0e0;">
+                            <option value="D1">D1 - Rasi (Birth Chart)</option>
+                            <option value="D2">D2 - Hora (Wealth)</option>
+                            <option value="D3">D3 - Drekkana (Siblings)</option>
+                            <option value="D4">D4 - Chaturthamsa (Property)</option>
+                            <option value="D7">D7 - Saptamsa (Children)</option>
+                            <option value="D9" selected>D9 - Navamsa (Spouse/Dharma)</option>
+                            <option value="D10">D10 - Dasamsa (Career)</option>
+                            <option value="D12">D12 - Dwadasamsa (Parents)</option>
+                            <option value="D16">D16 - Shodasamsa (Vehicles)</option>
+                            <option value="D20">D20 - Vimsamsa (Spiritual)</option>
+                            <option value="D24">D24 - Chaturvimsamsa (Education)</option>
+                            <option value="D27">D27 - Nakshatramsa (Strengths)</option>
+                            <option value="D30">D30 - Trimsamsa (Evils)</option>
+                            <option value="D40">D40 - Khavedamsa (Auspicious)</option>
+                            <option value="D45">D45 - Akshavedamsa (Character)</option>
+                            <option value="D60">D60 - Shashtiamsa (Karma)</option>
+                        </select>
+                        <button class="btn" onclick="generateDivisionalChart()" style="margin-left: 10px;">Generate Chart</button>
+                    </div>
+                </div>
+                <div id="divisional-chart-display">
+                    <p style="color: #999; text-align: center; padding: 50px 0;">
+                        Select a divisional chart and click Generate Chart
+                    </p>
+            </div>
+        </div>
+
+        <!-- Saved Charts Tab -->
+        <div id="saved-tab" class="tab-content">
+                <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Saved Birth Charts</h2>
+                <div id="saved-charts-list" style="max-width: 800px; margin: 0 auto;">
+                    <p style="color: #999; text-align: center;">No saved charts yet</p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -524,6 +574,96 @@
         let currentChartData = null;
         let currentInputData = null;  // Store original input for Rasi chart
         let searchTimeout = null;
+        let savedCharts = [];  // Store multiple saved charts
+
+        // Load saved charts on startup
+        window.addEventListener('load', function() {
+            loadSavedCharts();
+            updateSavedChartsList();  // Update display after loading
+        });
+
+        function loadSavedCharts() {
+            const saved = localStorage.getItem('vedic_astro_charts');
+            if (saved) {
+                try {
+                    savedCharts = JSON.parse(saved);
+                    console.log('Loaded charts from localStorage:', savedCharts.length);
+                } catch (e) {
+                    console.error('Error loading saved charts:', e);
+                    savedCharts = [];
+                }
+            }
+        }
+
+        function saveCurrentChart() {
+            if (!currentInputData) {
+                alert('Please calculate a chart first');
+                return;
+            }
+
+            const name = prompt('Enter a name for this chart:');
+            if (!name) return;
+
+            const chartToSave = {
+                id: Date.now(),
+                name: name,
+                data: currentInputData,
+                savedAt: new Date().toISOString()
+            };
+
+            savedCharts.push(chartToSave);
+            localStorage.setItem('vedic_astro_charts', JSON.stringify(savedCharts));
+            alert('Chart saved successfully!');
+            updateSavedChartsList();
+        }
+
+        function loadChart(chartId) {
+            const chart = savedCharts.find(c => c.id === chartId);
+            if (!chart) return;
+
+            // Populate form fields
+            document.getElementById('datetime').value = chart.data.datetime;
+            document.getElementById('latitude').value = chart.data.latitude;
+            document.getElementById('longitude').value = chart.data.longitude;
+            document.getElementById('timezone').value = chart.data.timezone_offset;
+
+            // Automatically calculate the chart
+            calculateChart(new Event('submit'));
+        }
+
+        function deleteChart(chartId) {
+            if (!confirm('Are you sure you want to delete this chart?')) return;
+
+            savedCharts = savedCharts.filter(c => c.id !== chartId);
+            localStorage.setItem('vedic_astro_charts', JSON.stringify(savedCharts));
+            updateSavedChartsList();
+        }
+
+        function updateSavedChartsList() {
+            const container = document.getElementById('saved-charts-list');
+            if (!container) return;
+
+            if (savedCharts.length === 0) {
+                container.innerHTML = '<p style="color: #999; text-align: center;">No saved charts yet</p>';
+                return;
+            }
+
+            container.innerHTML = savedCharts.map(chart => {
+                const date = new Date(chart.savedAt).toLocaleString();
+                return `
+                    <div style="background: white; padding: 10px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${chart.name}</strong><br>
+                            <small style="color: #666;">${date}</small>
+                        </div>
+                        <div>
+                            <button class="btn btn-small" onclick="loadChart(${chart.id})" style="margin-right: 5px;">Load</button>
+                            <button class="btn btn-small" onclick="deleteChart(${chart.id})" style="background: #dc3545;">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
 
         // Check server health on load
         window.addEventListener('load', checkHealth);
@@ -726,6 +866,7 @@
                         timezone_offset: timezoneOffset
                     };
                     displayChartResults(data.chart);
+                    updateSavedChartsList();  // Update saved charts list after calculation
                 } else {
                     resultsDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
                 }
@@ -806,8 +947,8 @@
             }
         }
 
-        function displayRasiChart(chartData) {
-            const displayDiv = document.getElementById('rasi-chart-display');
+        function displayRasiChart(chartData, targetDivId = 'rasi-chart-display') {
+            const displayDiv = document.getElementById(targetDivId);
             
             // South Indian chart: SIGN positions in grid (fixed layout)
             // Layout shows which SIGN NUMBER is in each grid position
@@ -875,6 +1016,53 @@
             `;
 
             displayDiv.innerHTML = html;
+        }
+
+        async function generateDivisionalChart() {
+            if (!currentChartData || !currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const varga = document.getElementById('varga-select').value;
+            const displayDiv = document.getElementById('divisional-chart-display');
+            
+            // Clear previous content and show loading
+            displayDiv.innerHTML = '<p style="text-align: center; padding: 50px;"><span class="loading" style="display: inline-block;"></span> Generating ' + varga + ' chart...</p>';
+
+            try {
+                const response = await fetch('/api/generate-divisional-chart', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...currentInputData,
+                        varga: varga
+                    })
+                });
+
+                // Check if response is OK
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 200)}`);
+                }
+
+                const data = await response.json();
+                console.log('Divisional chart data received:', data);
+
+                if (data.success) {
+                    // Force clear and redraw
+                    displayDiv.innerHTML = '';
+                    displayRasiChart(data, 'divisional-chart-display');  // Pass the correct div ID
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error || 'Unknown error'}</p>`;
+                }
+
+            } catch (error) {
+                console.error('Divisional chart error:', error);
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
         }
     </script>
 </body>

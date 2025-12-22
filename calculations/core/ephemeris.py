@@ -285,6 +285,281 @@ class VedicEphemeris:
             },
             'house_cusps': house_cusps
         }
+    
+    def calculate_divisional_chart(self, longitude: float, varga: str) -> float:
+        """Calculate divisional chart (Varga) position for a planet
+        
+        Args:
+            longitude: Sidereal longitude of planet
+            varga: Divisional chart type (D1, D2, D3, D4, D7, D9, D10, D12, D16, D20, D24, D27, D30, D40, D45, D60)
+        
+        Returns:
+            Divisional chart longitude
+        """
+        # Get varga number from string (e.g., "D9" -> 9)
+        varga_num = int(varga[1:])
+        
+        # Get sign and degree within sign
+        sign_num = int(longitude / 30)
+        degree_in_sign = longitude % 30
+        
+        if varga_num == 1:
+            # D1 - Rasi (Birth Chart) - no change
+            return longitude
+        
+        elif varga_num == 9:
+            # D9 - Navamsa Chart (most important divisional chart)
+            # Each sign divided into 9 parts of 3°20' (3.333...)
+            # Starting sign depends on nature of birth sign (Parashari system):
+            # Movable (0,3,6,9): Aries, Cancer, Libra, Capricorn - Start from same sign
+            # Fixed (1,4,7,10): Taurus, Leo, Scorpio, Aquarius - Start from 9th sign (8 signs ahead)
+            # Dual (2,5,8,11): Gemini, Virgo, Sagittarius, Pisces - Start from 5th sign (4 signs ahead)
+            
+            navamsa_within_sign = int(degree_in_sign / (30.0/9.0))  # 0-8
+            
+            # Determine starting sign based on sign nature
+            sign_nature = sign_num % 3
+            if sign_nature == 0:  # Movable signs
+                start_sign = sign_num
+            elif sign_nature == 1:  # Fixed signs
+                start_sign = (sign_num + 8) % 12
+            else:  # Dual signs (sign_nature == 2)
+                start_sign = (sign_num + 4) % 12  # FIXED: was +6, should be +4
+            
+            # Calculate final navamsa sign
+            new_sign = (start_sign + navamsa_within_sign) % 12
+            
+            # Degree within the navamsa sign
+            degree_within_navamsa = (degree_in_sign % (30.0/9.0)) * 9.0
+            
+            return (new_sign * 30) + degree_within_navamsa
+        
+        elif varga_num == 2:
+            # D2 - Hora Chart (Wealth)
+            # Each sign divided into 2 parts of 15° each
+            # Odd signs: First hora = Leo, Second hora = Cancer
+            # Even signs: First hora = Cancer, Second hora = Leo
+            hora_num = int(degree_in_sign / 15.0)  # 0 or 1
+            
+            if sign_num % 2 == 0:  # Even signs
+                new_sign = 4 if hora_num == 0 else 3  # Leo or Cancer
+            else:  # Odd signs
+                new_sign = 3 if hora_num == 0 else 4  # Cancer or Leo
+            
+            degree_within_hora = (degree_in_sign % 15.0) * 2.0
+            return (new_sign * 30) + degree_within_hora
+        
+        elif varga_num == 3:
+            # D3 - Drekkana Chart (Siblings, courage)
+            # Each sign divided into 3 parts of 10° each
+            # Start from same sign, then 5th and 9th
+            drekkana_num = int(degree_in_sign / 10.0)  # 0, 1, or 2
+            new_sign = (sign_num + (drekkana_num * 4)) % 12
+            
+            degree_within_drekkana = (degree_in_sign % 10.0) * 3.0
+            return (new_sign * 30) + degree_within_drekkana
+        
+        elif varga_num == 4:
+            # D4 - Chaturthamsa Chart (Fortune, property)
+            # Each sign divided into 4 parts of 7.5° each
+            # Start from same sign
+            chaturthamsa_num = int(degree_in_sign / 7.5)  # 0, 1, 2, or 3
+            new_sign = (sign_num + (chaturthamsa_num * 3)) % 12
+            
+            degree_within_part = (degree_in_sign % 7.5) * 4.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 7:
+            # D7 - Saptamsa Chart (Children, grandchildren)
+            # Each sign divided into 7 parts
+            # Odd zodiac signs (1,3,5,7,9,11) start from same sign
+            # Even zodiac signs (2,4,6,8,10,12) start from 7th sign
+            part_num = int(degree_in_sign / (30.0/7.0))  # 0-6
+            
+            # sign_num is 0-indexed, so odd zodiac signs have even sign_num
+            if sign_num % 2 == 0:  # Odd zodiac signs
+                start_sign = sign_num
+            else:  # Even zodiac signs
+                start_sign = (sign_num + 6) % 12
+            
+            new_sign = (start_sign + part_num) % 12
+            degree_within_part = (degree_in_sign % (30.0/7.0)) * 7.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 10:
+            # D10 - Dasamsa Chart (Career, profession)
+            # Each sign divided into 10 parts of 3° each
+            # Odd zodiac signs start from same sign, even zodiac signs start from 9th sign
+            part_num = int(degree_in_sign / 3.0)  # 0-9
+            
+            # sign_num is 0-indexed, so odd zodiac signs have even sign_num
+            if sign_num % 2 == 0:  # Odd zodiac signs
+                start_sign = sign_num
+            else:  # Even zodiac signs
+                start_sign = (sign_num + 8) % 12
+            
+            new_sign = (start_sign + part_num) % 12
+            degree_within_part = (degree_in_sign % 3.0) * 10.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 12:
+            # D12 - Dwadasamsa Chart (Parents)
+            # Each sign divided into 12 parts of 2.5° each
+            # Start from same sign
+            part_num = int(degree_in_sign / 2.5)  # 0-11
+            new_sign = (sign_num + part_num) % 12
+            
+            degree_within_part = (degree_in_sign % 2.5) * 12.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 16:
+            # D16 - Shodasamsa Chart (Vehicles, happiness)
+            # Each sign divided into 16 parts of 1.875° each
+            # Movable signs start from Aries, Fixed from Leo, Dual from Sagittarius
+            part_num = int(degree_in_sign / 1.875)  # 0-15
+            
+            sign_nature = sign_num % 3
+            if sign_nature == 0:  # Movable
+                start_sign = 0  # Aries
+            elif sign_nature == 1:  # Fixed
+                start_sign = 4  # Leo
+            else:  # Dual
+                start_sign = 8  # Sagittarius
+            
+            new_sign = (start_sign + part_num) % 12
+            degree_within_part = (degree_in_sign % 1.875) * 16.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 20:
+            # D20 - Vimsamsa Chart (Spiritual pursuits)
+            # Each sign divided into 20 parts of 1.5° each
+            # Movable signs start from Aries, Fixed from Sagittarius, Dual from Leo
+            part_num = int(degree_in_sign / 1.5)  # 0-19
+            
+            sign_nature = sign_num % 3
+            if sign_nature == 0:  # Movable
+                start_sign = 0  # Aries
+            elif sign_nature == 1:  # Fixed
+                start_sign = 8  # Sagittarius
+            else:  # Dual
+                start_sign = 4  # Leo
+            
+            new_sign = (start_sign + part_num) % 12
+            degree_within_part = (degree_in_sign % 1.5) * 20.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 24:
+            # D24 - Chaturvimsamsa Chart (Education, learning)
+            # Each sign divided into 24 parts of 1.25° each
+            # Odd zodiac signs start from Leo, even zodiac signs start from Cancer
+            part_num = int(degree_in_sign / 1.25)  # 0-23
+            
+            # sign_num is 0-indexed, so odd zodiac signs have even sign_num
+            if sign_num % 2 == 0:  # Odd zodiac signs
+                start_sign = 4  # Leo
+            else:  # Even zodiac signs
+                start_sign = 3  # Cancer
+            
+            new_sign = (start_sign + part_num) % 12
+            degree_within_part = (degree_in_sign % 1.25) * 24.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 27:
+            # D27 - Nakshatramsa/Bhamsa Chart (Strengths and weaknesses)
+            # Each sign divided into 27 parts (1°06'40" each)
+            # The 27 divisions cycle through the 12 signs starting from element-based sign
+            part_num = int(degree_in_sign / (30.0/27.0))  # 0-26
+            
+            # Fire signs start from Aries, Earth from Cancer, Air from Libra, Water from Capricorn
+            element = sign_num % 4
+            start_signs = [0, 3, 6, 9]  # Aries, Cancer, Libra, Capricorn
+            start_sign = start_signs[element]
+            
+            # Calculate which of the 27 nakshamsa divisions we're in for this sign
+            # Then find which zodiac sign that maps to
+            total_division = (sign_num * 27) + part_num  # Total division number 0-323
+            new_sign = (start_sign + (total_division % 27)) % 12
+            
+            degree_within_part = (degree_in_sign % (30.0/27.0)) * 27.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 30:
+            # D30 - Trimsamsa Chart (Misfortunes, evils)
+            # This uses a special non-uniform division
+            # Odd zodiac signs: Mars(5°), Saturn(5°), Jupiter(8°), Mercury(7°), Venus(5°)
+            # Even zodiac signs: Venus(5°), Mercury(7°), Jupiter(8°), Saturn(5°), Mars(5°)
+            
+            # sign_num is 0-indexed, so odd zodiac signs have even sign_num
+            if sign_num % 2 == 0:  # Odd zodiac signs
+                if degree_in_sign < 5:
+                    new_sign = 0  # Aries (Mars)
+                    degree = degree_in_sign * 6.0
+                elif degree_in_sign < 10:
+                    new_sign = 9  # Capricorn (Saturn)
+                    degree = (degree_in_sign - 5) * 6.0
+                elif degree_in_sign < 18:
+                    new_sign = 8  # Sagittarius (Jupiter)
+                    degree = (degree_in_sign - 10) * 3.75
+                elif degree_in_sign < 25:
+                    new_sign = 2  # Gemini (Mercury)
+                    degree = (degree_in_sign - 18) * 4.2857
+                else:
+                    new_sign = 1  # Taurus (Venus)
+                    degree = (degree_in_sign - 25) * 6.0
+            else:  # Even zodiac signs
+                if degree_in_sign < 5:
+                    new_sign = 1  # Taurus (Venus)
+                    degree = degree_in_sign * 6.0
+                elif degree_in_sign < 12:
+                    new_sign = 2  # Gemini (Mercury)
+                    degree = (degree_in_sign - 5) * 4.2857
+                elif degree_in_sign < 20:
+                    new_sign = 8  # Sagittarius (Jupiter)
+                    degree = (degree_in_sign - 12) * 3.75
+                elif degree_in_sign < 25:
+                    new_sign = 9  # Capricorn (Saturn)
+                    degree = (degree_in_sign - 20) * 6.0
+                else:
+                    new_sign = 0  # Aries (Mars)
+                    degree = (degree_in_sign - 25) * 6.0
+            
+            return (new_sign * 30) + degree
+        
+        elif varga_num == 40:
+            # D40 - Khavedamsa Chart (Auspicious and inauspicious effects)
+            # Each sign divided into 40 parts of 0.75° each
+            # Traditional method: part cycles through 12 signs
+            part_num = int(degree_in_sign / 0.75)  # 0-39
+            
+            # Use part % 12 to cycle through zodiac starting from current sign
+            new_sign = (sign_num + (part_num % 12)) % 12
+            degree_within_part = (degree_in_sign % 0.75) * 40.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 45:
+            # D45 - Akshavedamsa Chart (General indications)
+            # Each sign divided into 45 parts
+            # Traditional method: part cycles through 12 signs
+            part_num = int(degree_in_sign / (30.0/45.0))  # 0-44
+            
+            # Use part % 12 to cycle through zodiac starting from current sign
+            new_sign = (sign_num + (part_num % 12)) % 12
+            degree_within_part = (degree_in_sign % (30.0/45.0)) * 45.0
+            return (new_sign * 30) + degree_within_part
+        
+        elif varga_num == 60:
+            # D60 - Shashtiamsa Chart (Overall life, past karma)
+            # Each sign divided into 60 parts of 0.5° each
+            # Traditional method: part cycles through 12 signs
+            part_num = int(degree_in_sign / 0.5)  # 0-59
+            
+            # Use part % 12 to cycle through zodiac starting from current sign
+            new_sign = (sign_num + (part_num % 12)) % 12
+            degree_within_part = (degree_in_sign % 0.5) * 60.0
+            return (new_sign * 30) + degree_within_part
+        
+        # For unsupported vargas, return original longitude
+        return longitude
 
 
 # Example usage

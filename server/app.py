@@ -1,6 +1,7 @@
 """
 Vedic Astrology LLM Server
 Flask API server for model interaction and calculations
+Updated with divisional chart support
 """
 
 from flask import Flask, request, jsonify, render_template, send_from_directory
@@ -517,6 +518,86 @@ def generate_rasi_chart():
         import traceback
         return jsonify({
             'error': f'Chart generation error: {str(e)}',
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/api/generate-divisional-chart', methods=['POST'])
+def generate_divisional_chart():
+    """
+    Generate divisional chart (Varga) data for visualization
+    Currently supports D1 (Rasi) and D9 (Navamsa)
+    """
+    data = request.json
+    
+    try:
+        dt_str = data.get('datetime')
+        if not dt_str:
+            return jsonify({'error': 'datetime is required'}), 400
+        
+        varga = data.get('varga', 'D9')
+        
+        dt_local = datetime.fromisoformat(dt_str.replace('Z', '+00:00'))
+        
+        # Get timezone offset and convert to UTC
+        timezone_offset = data.get('timezone_offset', 0)
+        from datetime import timedelta
+        dt_utc = dt_local - timedelta(hours=timezone_offset)
+        
+        lat = float(data.get('latitude', 0))
+        lon = float(data.get('longitude', 0))
+        
+        # Get base chart data
+        chart = ephemeris.get_chart_data(dt_utc, lat, lon)
+        
+        # Calculate divisional chart positions
+        ascendant_degree = chart['ascendant']['degree']
+        divisional_ascendant = ephemeris.calculate_divisional_chart(ascendant_degree, varga)
+        divisional_ascendant_sign_num = int(divisional_ascendant / 30)
+        divisional_ascendant_sign = ephemeris.SIGNS[divisional_ascendant_sign_num]
+        
+        # Initialize all 12 zodiac signs
+        signs = {}
+        for i in range(12):
+            sign_num = i
+            signs[i+1] = {
+                'number': i + 1,
+                'sign': ephemeris.SIGNS[sign_num],
+                'sign_num': sign_num,
+                'planets': [],
+                'has_ascendant': sign_num == divisional_ascendant_sign_num
+            }
+        
+        # Place each planet in its divisional chart sign
+        for planet_name, planet_data in chart['planets'].items():
+            divisional_longitude = ephemeris.calculate_divisional_chart(planet_data['longitude'], varga)
+            planet_sign_num = int(divisional_longitude / 30)
+            sign_key = planet_sign_num + 1
+            
+            signs[sign_key]['planets'].append({
+                'name': planet_name,
+                'degree': divisional_longitude % 30,
+                'longitude': divisional_longitude,
+                'speed': planet_data['speed'],
+                'is_retrograde': planet_data.get('is_retrograde', False),
+                'is_combust': planet_data.get('is_combust', False)
+            })
+        
+        return jsonify({
+            'success': True,
+            'chart_type': f'{varga} Chart',
+            'ascendant': {
+                'sign': divisional_ascendant_sign,
+                'degree': divisional_ascendant % 30,
+                'sign_num': divisional_ascendant_sign_num
+            },
+            'signs': signs
+        })
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': f'Divisional chart generation error: {str(e)}',
             'traceback': traceback.format_exc()
         }), 500
 
