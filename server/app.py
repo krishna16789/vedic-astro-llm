@@ -34,11 +34,24 @@ ephemeris = VedicEphemeris()
 # Initialize local Mistral model
 model = None
 tokenizer = None
-device = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Detect best available device (Apple Silicon MPS, NVIDIA CUDA, or CPU)
+if torch.backends.mps.is_available():
+    device = "mps"
+    print("✓ Detected Apple Silicon GPU (MPS)")
+elif torch.cuda.is_available():
+    device = "cuda"
+    print("✓ Detected NVIDIA GPU (CUDA)")
+else:
+    device = "cpu"
+    print("⚠️  No GPU detected, using CPU")
+
 model_loaded = False
 
 # Configuration options - adjust these based on your system
 LOAD_MODEL_ON_STARTUP = False  # Set to False to prevent crashes - load on first request instead
+USE_FINE_TUNED_MODEL = True    # Use your fine-tuned model from checkpoints
+CHECKPOINT_PATH = "./training/checkpoints/mistral-7b-lora/checkpoint-210"  # Your trained checkpoint
 USE_4BIT_QUANTIZATION = True   # Reduces memory from ~14GB to ~4GB
 USE_8BIT_QUANTIZATION = False  # Alternative: ~7GB memory
 MAX_MEMORY_GB = 8              # Maximum memory to use (adjust based on your system)
@@ -56,14 +69,28 @@ def load_local_model():
         return False
     
     try:
-        model_name = "mistralai/Mistral-7B-v0.1"
-        print(f"\n{'=' * 60}")
-        print(f"Loading {model_name} on {device}...")
-        print(f"Memory settings:")
-        print(f"  - 4-bit quantization: {USE_4BIT_QUANTIZATION}")
-        print(f"  - 8-bit quantization: {USE_8BIT_QUANTIZATION}")
-        print(f"  - Max memory: {MAX_MEMORY_GB}GB")
-        print(f"{'=' * 60}\n")
+        # Check if we should use fine-tuned model
+        if USE_FINE_TUNED_MODEL and os.path.exists(CHECKPOINT_PATH):
+            model_name = "mistralai/Mistral-7B-v0.1"
+            print(f"\n{'=' * 60}")
+            print(f"🎯 Loading FINE-TUNED MODEL from {CHECKPOINT_PATH}")
+            print(f"Base model: {model_name}")
+            print(f"Training checkpoint: Step 210 (Vedic Astrology trained!)")
+            print(f"Memory settings:")
+            print(f"  - 4-bit quantization: {USE_4BIT_QUANTIZATION}")
+            print(f"  - 8-bit quantization: {USE_8BIT_QUANTIZATION}")
+            print(f"  - Max memory: {MAX_MEMORY_GB}GB")
+            print(f"{'=' * 60}\n")
+        else:
+            model_name = "mistralai/Mistral-7B-v0.1"
+            print(f"\n{'=' * 60}")
+            print(f"⚠️  Loading BASE MODEL (no astrology training)")
+            print(f"Loading {model_name} on {device}...")
+            print(f"Memory settings:")
+            print(f"  - 4-bit quantization: {USE_4BIT_QUANTIZATION}")
+            print(f"  - 8-bit quantization: {USE_8BIT_QUANTIZATION}")
+            print(f"  - Max memory: {MAX_MEMORY_GB}GB")
+            print(f"{'=' * 60}\n")
         
         # Load tokenizer (minimal memory)
         tokenizer = AutoTokenizer.from_pretrained(
@@ -83,7 +110,7 @@ def load_local_model():
             "trust_remote_code": True,
         }
         
-        # Add quantization if requested (requires bitsandbytes)
+        # Add quantization if requested (requires bitsandbytes - only works on CUDA)
         if USE_4BIT_QUANTIZATION and device == "cuda":
             try:
                 from transformers import BitsAndBytesConfig
@@ -118,6 +145,13 @@ def load_local_model():
             model_kwargs["torch_dtype"] = torch.float16
             model_kwargs["device_map"] = "auto"
             model_kwargs["max_memory"] = {0: f"{MAX_MEMORY_GB}GB"}
+        elif device == "mps":
+            # Apple Silicon MPS - use float16 for efficiency
+            # Note: bitsandbytes quantization is not supported on MPS
+            print("✓ Using Apple Silicon MPS backend")
+            print("⚠️  Note: Quantization not supported on MPS, using float16")
+            model_kwargs["torch_dtype"] = torch.float16
+            # MPS doesn't support device_map="auto", load to MPS manually after loading
         else:
             # CPU mode - use float32 but with memory constraints
             model_kwargs["torch_dtype"] = torch.float32
@@ -125,20 +159,45 @@ def load_local_model():
             print(f"   Consider using GPU or reducing MAX_MEMORY_GB")
         
         # Load model
-        print("Loading model... (this may take 2-5 minutes)")
+        print("Loading base model... (this may take 2-5 minutes)")
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
             **model_kwargs
         )
         
+        # Load LoRA adapters if using fine-tuned model
+        if USE_FINE_TUNED_MODEL and os.path.exists(CHECKPOINT_PATH):
+            try:
+                from peft import PeftModel
+                print(f"\n🔧 Loading LoRA adapters from checkpoint...")
+                model = PeftModel.from_pretrained(model, CHECKPOINT_PATH)
+                print(f"✓ LoRA adapters loaded successfully!")
+                print(f"✓ Model is now FINE-TUNED for Vedic Astrology!")
+            except ImportError:
+                print("⚠️  peft not installed. Install with: pip install peft")
+                print("⚠️  Using base model without fine-tuning")
+            except Exception as e:
+                print(f"⚠️  Error loading LoRA adapters: {e}")
+                print("⚠️  Using base model without fine-tuning")
+        
+        # Move to MPS if that's our device (MPS doesn't support device_map="auto")
+        if device == "mps":
+            model = model.to(device)
+        
         model.eval()  # Set to evaluation mode
         
-        print(f"✓ Model loaded successfully on {device}")
+        if USE_FINE_TUNED_MODEL and os.path.exists(CHECKPOINT_PATH):
+            print(f"✓ FINE-TUNED model loaded successfully on {device}")
+        else:
+            print(f"✓ Base model loaded successfully on {device}")
         
-        # Print memory stats if on CUDA
+        # Print memory stats
         if device == "cuda":
             print(f"✓ GPU Memory allocated: {torch.cuda.memory_allocated(0) / 1e9:.2f} GB")
             print(f"✓ GPU Memory reserved: {torch.cuda.memory_reserved(0) / 1e9:.2f} GB")
+        elif device == "mps":
+            print(f"✓ Model loaded on Apple Silicon GPU")
+            print(f"⚠️  MPS memory stats not available via PyTorch")
         
         model_loaded = True
         return True
@@ -189,11 +248,12 @@ def health():
 def chat():
     """
     Chat with local Mistral model
-    Request: {"message": "user message", "history": [...]}
+    Request: {"message": "user message", "history": [...], "chart_data": {...}}
     """
     data = request.json
     user_message = data.get('message', '')
     history = data.get('history', [])
+    chart_data = data.get('chart_data', None)  # Optional chart context
     
     if not user_message:
         return jsonify({'error': 'No message provided'}), 400
@@ -207,39 +267,53 @@ def chat():
     if model is not None and tokenizer is not None:
         try:
             # Prepare the prompt with system message and conversation history
-            system_prompt = """You are an expert Vedic astrologer with deep knowledge of:
-- Planetary positions and their interpretations
-- Nakshatras (lunar mansions) and their meanings
-- Yogas and astrological combinations
-- Birth chart analysis and predictions
-- Vedic astrology principles and classical texts
+            # Using Mistral's proper chat format
+            system_prompt = """You are an expert Vedic astrologer with deep knowledge of planetary positions, nakshatras, yogas, and birth chart analysis. Provide accurate, insightful answers based on Vedic astrology principles."""
 
-Provide accurate, insightful answers based on Vedic astrology principles.
-When discussing planetary positions, refer to the sidereal (Nirayana) zodiac.
-Be respectful of the sacred nature of this knowledge."""
+            # Add chart data to context if provided
+            chart_context = ""
+            if chart_data:
+                chart_context = "\n\nCURRENT CHART DATA:\n"
+                if 'ascendant' in chart_data:
+                    chart_context += f"Ascendant: {chart_data['ascendant'].get('sign', 'Unknown')} at {chart_data['ascendant'].get('degree_in_sign', 0):.2f}°\n"
+                if 'planets' in chart_data:
+                    chart_context += "Planetary Positions:\n"
+                    for planet, pos in chart_data['planets'].items():
+                        chart_context += f"- {planet}: {pos.get('sign', '')} {pos.get('degree_in_sign', 0):.2f}° in {pos.get('nakshatra', '')}\n"
 
-            # Build conversation context
-            conversation = f"<s>[INST] {system_prompt}\n\n"
+            # Build conversation - Mistral format: <s>[INST] User message [/INST] Assistant response</s>
+            # For multiple turns: <s>[INST] msg1 [/INST] response1</s><s>[INST] msg2 [/INST] response2</s>
             
-            # Add recent history (last 3 exchanges for context)
-            for msg in history[-6:]:  # Last 3 user-assistant pairs
-                if msg.get('role') == 'user':
-                    conversation += f"{msg.get('content', '')}\n"
-                elif msg.get('role') == 'assistant':
-                    conversation += f"[/INST] {msg.get('content', '')} </s><s>[INST] "
-            
-            # Add current user message
-            conversation += f"{user_message} [/INST]"
+            if len(history) == 0:
+                # First message - include system prompt and chart context
+                conversation = f"<s>[INST] {system_prompt}{chart_context}\n\n{user_message} [/INST]"
+            else:
+                # Build conversation with history (last 2 exchanges for context)
+                conversation_parts = []
+                
+                # Add recent history
+                for i in range(max(0, len(history) - 4), len(history), 2):  # Last 2 exchanges
+                    if i < len(history):
+                        user_msg = history[i].get('content', '') if history[i].get('role') == 'user' else ''
+                        if i + 1 < len(history):
+                            assistant_msg = history[i + 1].get('content', '') if history[i + 1].get('role') == 'assistant' else ''
+                            if user_msg and assistant_msg:
+                                conversation_parts.append(f"<s>[INST] {user_msg} [/INST] {assistant_msg}</s>")
+                
+                # Add current message
+                conversation_parts.append(f"<s>[INST] {user_message} [/INST]")
+                conversation = "".join(conversation_parts)
             
             # Tokenize
             inputs = tokenizer(conversation, return_tensors="pt", truncation=True, max_length=2048)
             inputs = {k: v.to(device) for k, v in inputs.items()}
             
-            # Generate response
+            # Generate response (reduced tokens for CPU, reasonable for GPU)
+            max_tokens = 50 if device == "cpu" else 512  # Much faster on CPU, full on GPU
             with torch.no_grad():
                 outputs = model.generate(
                     **inputs,
-                    max_new_tokens=512,
+                    max_new_tokens=max_tokens,
                     temperature=0.7,
                     top_p=0.9,
                     do_sample=True,
@@ -267,25 +341,55 @@ Be respectful of the sacred nature of this knowledge."""
     
     else:
         # Mock response when model is not loaded
-        mock_response = f"""The Mistral 7B model is not currently loaded. This could be because:
+        # Provide helpful context about the chart if available
+        if chart_data and 'ascendant' in chart_data:
+            asc = chart_data['ascendant']
+            planets_summary = []
+            if 'planets' in chart_data:
+                for planet, pos in list(chart_data['planets'].items())[:5]:  # First 5 planets
+                    planets_summary.append(f"{planet} in {pos.get('sign', '')} ({pos.get('nakshatra', '')})")
+            
+            mock_response = f"""📊 CHART ANALYSIS (Mock Mode - Base Model Not Trained)
 
-1. The model is still loading (this takes 2-5 minutes on first start)
-2. There was an error loading the model
-3. Insufficient memory available
+⚠️ IMPORTANT: The base Mistral model isn't trained for Vedic astrology!
+You're seeing random responses because this model needs fine-tuning with your training data.
 
-For now, I can help you with:
-- Calculating planetary positions (use the Chart Calculator)
-- Understanding Vedic astrology concepts
-- Testing the ephemeris calculations
+However, I can see your chart data:
+• Ascendant: {asc.get('sign', '')} at {asc.get('degree_in_sign', 0):.2f}°
+• Key Planets: {', '.join(planets_summary[:3])}
+
+💡 TO GET REAL ASTROLOGY INSIGHTS:
+1. Fine-tune the model using your training data in /data/final/
+2. Or use the Chart Calculator for accurate calculations
+3. Or use an API-based astrology model
 
 You asked: "{user_message}"
 
-Try using the Chart Calculator tab to see real planetary calculations!"""
+The random response you got earlier is because the base model has no astrology knowledge."""
+        else:
+            mock_response = f"""⚠️ MODEL NOT READY FOR ASTROLOGY
+
+The base Mistral 7B model isn't trained for Vedic astrology! You're getting random responses because:
+
+1. This is a general language model (knows about bullets, not planets!)
+2. It needs fine-tuning with your Vedic astrology training data
+3. The training data is in /data/final/ but hasn't been used yet
+
+💡 OPTIONS:
+• Use the Chart Calculator (always accurate!)
+• Fine-tune the model with your training data
+• Wait for model loading (2-5 minutes on first request)
+• Use an API-based astrology service
+
+You asked: "{user_message}"
+
+For now, use the Chart Calculator tab for real planetary calculations!"""
         
         return jsonify({
             'response': mock_response,
             'model': 'mock',
-            'using_mock': True
+            'using_mock': True,
+            'note': 'Base model not trained for astrology - use Chart Calculator or fine-tune model'
         })
 
 

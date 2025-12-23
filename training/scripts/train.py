@@ -96,19 +96,26 @@ class VedicAstroTrainer:
         print("Loading Model and Tokenizer")
         print("=" * 60)
         
-        # Check for CUDA availability
+        # Check for GPU availability (CUDA or MPS)
         has_cuda = torch.cuda.is_available()
+        has_mps = torch.backends.mps.is_available()
+        
         print(f"✓ CUDA available: {has_cuda}")
         if has_cuda:
             print(f"  - GPU: {torch.cuda.get_device_name(0)}")
             print(f"  - Memory: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
+        
+        print(f"✓ MPS (Apple Silicon) available: {has_mps}")
+        if has_mps:
+            print(f"  - Device: Apple Silicon GPU")
+            print(f"  - Note: Quantization not supported on MPS")
         
         # Quantization config (only if CUDA available)
         bnb_config = None
         device_map = None
         
         if self.model_args.use_4bit and has_cuda:
-            # 4-bit quantization (QLoRA) - uses less memory
+            # 4-bit quantization (QLoRA) - uses less memory (CUDA only)
             bnb_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_compute_dtype=getattr(torch, self.model_args.bnb_4bit_compute_dtype),
@@ -120,15 +127,19 @@ class VedicAstroTrainer:
             print(f"  - Compute dtype: {self.model_args.bnb_4bit_compute_dtype}")
             print(f"  - Quant type: {self.model_args.bnb_4bit_quant_type}")
         elif self.model_args.use_8bit and has_cuda:
-            # 8-bit quantization
+            # 8-bit quantization (CUDA only)
             bnb_config = BitsAndBytesConfig(
                 load_in_8bit=True,
                 llm_int8_threshold=6.0,
             )
             device_map = "auto"
             print("✓ Using 8-bit quantization")
-        elif not has_cuda:
-            print("⚠️  No CUDA detected - training on CPU (will be slow)")
+        elif has_mps:
+            print("✓ Using Apple Silicon MPS")
+            print("⚠️  Quantization not supported on MPS, using float16")
+            device_map = "mps"
+        elif not has_cuda and not has_mps:
+            print("⚠️  No GPU detected - training on CPU (will be slow)")
             device_map = "cpu"
         else:
             device_map = "auto"
@@ -160,9 +171,14 @@ class VedicAstroTrainer:
         else:
             model_kwargs["torch_dtype"] = torch.float32
         
-        # Only use device_map if not using accelerate's auto device placement
-        if device_map != "auto":
+        # Handle device mapping
+        if device_map == "mps":
+            # MPS doesn't support device_map, we'll move model manually after loading
+            pass
+        elif device_map != "auto":
             model_kwargs["device_map"] = device_map
+        else:
+            model_kwargs["device_map"] = "auto"
         
         model = AutoModelForCausalLM.from_pretrained(
             self.model_args.model_name,

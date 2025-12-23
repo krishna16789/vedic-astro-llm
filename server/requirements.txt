@@ -7,6 +7,9 @@ torch>=2.0.0
 transformers>=4.35.0
 accelerate>=0.24.0
 
+# PEFT for loading LoRA fine-tuned models
+peft>=0.7.0
+
 # For efficient quantization (reduces memory usage by 75%)
 bitsandbytes>=0.41.0
 
