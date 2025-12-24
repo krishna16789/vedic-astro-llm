@@ -4,30 +4,25 @@
 
 model:
   name: "mistralai/Mistral-7B-v0.1"  # Open-access base model
-  load_in_8bit: true  # Use 8-bit quantization for memory efficiency
+  load_in_8bit: false  # 8-bit not supported on MPS
   torch_dtype: "float16"
 
 lora:
-  r: 16  # LoRA rank
-  lora_alpha: 32  # LoRA alpha
+  r: 8  # Synced with colab-optimized
+  lora_alpha: 16  # Synced with colab-optimized
   lora_dropout: 0.05
   bias: "none"
   task_type: "CAUSAL_LM"
   target_modules:
     - "q_proj"
-    - "v_proj"
-    - "k_proj"
-    - "o_proj"
-    - "gate_proj"
-    - "up_proj"
-    - "down_proj"
+    - "v_proj"  # Synced with colab-optimized (2 modules for consistency)
 
 training:
-  output_dir: "./training/checkpoints/mistral-7b-lora"
+  output_dir: "../checkpoints/mistral-7b-lora"
   num_train_epochs: 3
-  per_device_train_batch_size: 4
+  per_device_train_batch_size: 4  # Synced with colab-optimized
   per_device_eval_batch_size: 4
-  gradient_accumulation_steps: 4  # Effective batch size = 16
+  gradient_accumulation_steps: 16  # Synced with colab-optimized (effective batch = 64)
   learning_rate: 2.0e-4
   warmup_steps: 100
   logging_steps: 10
@@ -41,7 +36,7 @@ training:
   
   # Optimization
   fp16: true
-  optim: "paged_adamw_8bit"
+  optim: "adamw_torch"  # Use standard AdamW for MPS compatibility
   gradient_checkpointing: true
   max_grad_norm: 0.3
   
@@ -51,11 +46,11 @@ training:
   
   # Logging
   report_to: ["tensorboard"]
-  logging_dir: "./training/logs"
+  logging_dir: "../logs"
 
 data:
-  train_file: "./data/final/train.json"
-  validation_file: "./data/final/validation.json"
+  train_file: "../../data/final/train.json"
+  validation_file: "../../data/final/validation.json"
   max_train_samples: null  # Use all samples
   max_eval_samples: 500
 

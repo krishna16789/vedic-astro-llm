@@ -7,26 +7,26 @@ model:
   torch_dtype: "float32"  # Better compatibility with MPS
 
 lora:
-  r: 8  # Reduced rank for faster training
-  lora_alpha: 16
+  r: 8  # Synced with colab-optimized
+  lora_alpha: 16  # Synced with colab-optimized
   lora_dropout: 0.05
   bias: "none"
   task_type: "CAUSAL_LM"
   target_modules:
     - "q_proj"
-    - "v_proj"
+    - "v_proj"  # Synced with colab-optimized
 
 training:
   output_dir: "./training/checkpoints/test-run"
   num_train_epochs: 1  # Just 1 epoch for testing
-  per_device_train_batch_size: 1  # Smaller batches
-  per_device_eval_batch_size: 1
-  gradient_accumulation_steps: 2  # Less accumulation
+  per_device_train_batch_size: 4  # Synced with colab-optimized
+  per_device_eval_batch_size: 4
+  gradient_accumulation_steps: 16  # Synced with colab-optimized
   learning_rate: 2.0e-4
   warmup_steps: 10  # Fewer warmup steps
   logging_steps: 1  # Log every step to see progress
-  save_steps: 50  # Save less frequently
-  eval_steps: 50
+  save_steps: 500  # Save every 500 steps to reduce checkpoint overhead
+  eval_steps: 500
   eval_strategy: "steps"
   save_total_limit: 2
   load_best_model_at_end: false  # Skip for speed
