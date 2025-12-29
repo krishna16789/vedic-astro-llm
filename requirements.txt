@@ -21,14 +21,6 @@ pymupdf>=1.23.0  # Better PDF extraction (PyMuPDF/fitz)
 fastapi>=0.104.0
 uvicorn>=0.24.0
 pydantic>=2.4.0
-flask>=3.0.0
-flask-cors>=4.0.0
-geopy>=2.4.0  # For location search/geocoding
-
-# LLM API Clients
-google-generativeai>=0.3.0  # For Gemini API
-groq>=0.4.0  # For Groq API
-openai>=1.0.0  # For DeepSeek and OpenRouter APIs
 
 # Utilities
 python-dotenv>=1.0.0

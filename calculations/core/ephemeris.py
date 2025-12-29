@@ -538,16 +538,14 @@ class VedicEphemeris:
         
         elif varga_num == 45:
             # D45 - Akshavedamsa Chart (General indications)
-            # Each sign divided into 45 parts of 0°40' (0.6667°) each
-            # CORRECTED: Using VedAstro lookup table approach
-            # Pattern based on element (triplicity):
-            # - Fire signs (Aries, Leo, Sagittarius): Start from Aries/Leo/Sagittarius
-            # - Earth signs (Taurus, Virgo, Capricorn): Start from Leo/Sagittarius/Aries
-            # - Air signs (Gemini, Libra, Aquarius): Start from Sagittarius/Aries/Leo
-            # - Water signs (Cancer, Scorpio, Pisces): Start from Aries/Leo/Sagittarius
+            # Each sign divided into 45 parts
+            # Traditional method: part cycles through 12 signs
+            part_num = int(degree_in_sign / (30.0/45.0))  # 0-44
             
-            from calculations.core.divisional_charts_corrected import calculate_d45
-            return calculate_d45(longitude)
+            # Use part % 12 to cycle through zodiac starting from current sign
+            new_sign = (sign_num + (part_num % 12)) % 12
+            degree_within_part = (degree_in_sign % (30.0/45.0)) * 45.0
+            return (new_sign * 30) + degree_within_part
         
         elif varga_num == 60:
             # D60 - Shashtiamsa Chart (Overall life, past karma)

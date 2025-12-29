@@ -52,7 +52,7 @@ data:
   train_file: "../../data/final/train.json"
   validation_file: "../../data/final/validation.json"
   max_train_samples: null  # Use all samples
-  max_eval_samples: 100  # Reduced for faster validation
+  max_eval_samples: 500
 
 # Optional: W&B tracking
 wandb:
