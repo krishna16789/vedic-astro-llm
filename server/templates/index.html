@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Vedic Astrology LLM</title>
+    <!-- Markdown rendering library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -118,6 +120,106 @@
         .message.assistant {
             background: white;
             border: 1px solid #e0e0e0;
+            line-height: 1.6;
+        }
+
+        /* Markdown formatting styles */
+        .message.assistant h1 {
+            font-size: 1.8rem;
+            color: #667eea;
+            margin: 15px 0 10px 0;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .message.assistant h2 {
+            font-size: 1.4rem;
+            color: #667eea;
+            margin: 12px 0 8px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .message.assistant h3 {
+            font-size: 1.2rem;
+            color: #5568d3;
+            margin: 10px 0 6px 0;
+        }
+
+        .message.assistant h4 {
+            font-size: 1.1rem;
+            color: #333;
+            margin: 8px 0 4px 0;
+        }
+
+        .message.assistant ul, .message.assistant ol {
+            margin: 10px 0;
+            padding-left: 25px;
+        }
+
+        .message.assistant li {
+            margin: 5px 0;
+        }
+
+        .message.assistant p {
+            margin: 8px 0;
+        }
+
+        .message.assistant strong {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .message.assistant code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+
+        .message.assistant pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .message.assistant pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .message.assistant hr {
+            border: none;
+            border-top: 2px solid #e0e0e0;
+            margin: 15px 0;
+        }
+
+        .message.assistant blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin: 10px 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .message.assistant table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .message.assistant th, .message.assistant td {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .message.assistant th {
+            background: #f5f5f5;
+            font-weight: 600;
         }
 
         .message.system {
@@ -395,11 +497,15 @@
         </header>
 
         <div class="tabs">
-            <button class="tab active" onclick="switchTab('chat')">💬 Chat with AI</button>
-            <button class="tab" onclick="switchTab('calculator')">📊 Chart Calculator</button>
-            <button class="tab" onclick="switchTab('rasi')">🔮 Rasi Chart (D1)</button>
-            <button class="tab" onclick="switchTab('divisional')">📐 Divisional Charts</button>
-            <button class="tab" onclick="switchTab('saved')">💾 Saved Charts</button>
+            <button class="tab active" onclick="switchTab('chat', event)">💬 Chat with AI</button>
+            <button class="tab" onclick="switchTab('calculator', event)">📊 Chart Calculator</button>
+            <button class="tab" onclick="switchTab('rasi', event)">🔮 Rasi Chart (D1)</button>
+            <button class="tab" onclick="switchTab('divisional', event)">📐 Divisional Charts</button>
+            <button class="tab" onclick="switchTab('shadbala', event)">💪 Shadbala</button>
+            <button class="tab" onclick="switchTab('bhavabala', event)">🏠 Bhavabala</button>
+            <button class="tab" onclick="switchTab('dasha', event)">⏰ Dasha Periods</button>
+            <button class="tab" onclick="switchTab('nakshatra', event)">⭐ Nakshatra Info</button>
+            <button class="tab" onclick="switchTab('saved', event)">💾 Saved Charts</button>
         </div>
 
         <!-- Chat Tab -->
@@ -559,12 +665,75 @@
             </div>
         </div>
 
+        <!-- Shadbala Tab -->
+        <div id="shadbala-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Shadbala (Six-fold Planetary Strength)</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-small" onclick="calculateShadbala()">Calculate Shadbala</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    Calculate chart first in the Chart Calculator tab
+                </p>
+            </div>
+            <div id="shadbala-results" style="max-width: 1000px; margin: 0 auto;">
+                <p style="color: #999; text-align: center; padding: 50px 0;">
+                    Calculate a birth chart first, then click Calculate Shadbala
+                </p>
+            </div>
+        </div>
+
+        <!-- Bhavabala Tab -->
+        <div id="bhavabala-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Bhavabala (House Strength)</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-small" onclick="calculateBhavabala()">Calculate Bhavabala</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    Calculate chart first in the Chart Calculator tab
+                </p>
+            </div>
+            <div id="bhavabala-results" style="max-width: 1000px; margin: 0 auto;">
+                <p style="color: #999; text-align: center; padding: 50px 0;">
+                    Calculate a birth chart first, then click Calculate Bhavabala
+                </p>
+            </div>
+        </div>
+
+        <!-- Dasha Tab -->
+        <div id="dasha-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Vimshottari Dasha Periods</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-small" onclick="calculateDasha()">Calculate Dasha</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    Calculate chart first in the Chart Calculator tab
+                </p>
+            </div>
+            <div id="dasha-results" style="max-width: 1200px; margin: 0 auto;">
+                <p style="color: #999; text-align: center; padding: 50px 0;">
+                    Calculate a birth chart first, then click Calculate Dasha
+                </p>
+            </div>
+        </div>
+
+        <!-- Nakshatra Attributes Tab -->
+        <div id="nakshatra-tab" class="tab-content">
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Nakshatra Attributes & Karakas</h2>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-small" onclick="calculateNakshatraAttributes()">Calculate Attributes</button>
+                <p style="margin-top: 10px; color: #666; font-size: 0.9rem;">
+                    Shows Karakas, Yoni, Gana, Nadi, Varna, and more
+                </p>
+            </div>
+            <div id="nakshatra-results" style="max-width: 1200px; margin: 0 auto;">
+                <p style="color: #999; text-align: center; padding: 50px 0;">
+                    Calculate a birth chart first, then click Calculate Attributes
+                </p>
+            </div>
+        </div>
+
         <!-- Saved Charts Tab -->
         <div id="saved-tab" class="tab-content">
-                <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Saved Birth Charts</h2>
-                <div id="saved-charts-list" style="max-width: 800px; margin: 0 auto;">
-                    <p style="color: #999; text-align: center;">No saved charts yet</p>
-                </div>
+            <h2 style="margin-bottom: 20px; color: #667eea; text-align: center;">Saved Birth Charts</h2>
+            <div id="saved-charts-list" style="max-width: 800px; margin: 0 auto;">
+                <p style="color: #999; text-align: center;">No saved charts yet</p>
             </div>
         </div>
     </div>
@@ -689,12 +858,14 @@
             }
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             // Update tab buttons
             document.querySelectorAll('.tab').forEach(tab => {
                 tab.classList.remove('active');
             });
-            event.target.classList.add('active');
+            if (evt && evt.target) {
+                evt.target.classList.add('active');
+            }
 
             // Update tab content
             document.querySelectorAll('.tab-content').forEach(content => {
@@ -761,7 +932,19 @@
             const messagesContainer = document.getElementById('chat-messages');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${role}`;
-            messageDiv.textContent = content;
+            
+            // Render markdown for assistant messages
+            if (role === 'assistant' && typeof marked !== 'undefined') {
+                try {
+                    messageDiv.innerHTML = marked.parse(content);
+                } catch (e) {
+                    console.error('Markdown parsing error:', e);
+                    messageDiv.textContent = content;
+                }
+            } else {
+                messageDiv.textContent = content;
+            }
+            
             messagesContainer.appendChild(messageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
@@ -1015,6 +1198,372 @@
                 </div>
             `;
 
+            displayDiv.innerHTML = html;
+        }
+
+        async function calculateShadbala() {
+            if (!currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const displayDiv = document.getElementById('shadbala-results');
+            displayDiv.innerHTML = '<p style="text-align: center;">Calculating Shadbala...</p>';
+
+            try {
+                const response = await fetch('/api/calculate-shadbala', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(currentInputData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayShadbalaResults(data.shadbala);
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayShadbalaResults(shadbala) {
+            const displayDiv = document.getElementById('shadbala-results');
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px;">';
+            
+            for (const [planet, data] of Object.entries(shadbala)) {
+                const strength = data.rupas || 0;
+                const minReq = data.minimum_required || 5;
+                const ratio = data.ratio || 1;
+                const category = strength >= 6 ? 'Very Strong' : strength >= 5 ? 'Strong' : strength >= 4 ? 'Moderate' : strength >= 3 ? 'Weak' : 'Very Weak';
+                const color = strength >= minReq ? '#28a745' : strength >= minReq * 0.8 ? '#ffc107' : '#dc3545';
+                
+                html += `
+                    <div class="planet-info" style="border-left: 4px solid ${color};">
+                        <div class="planet-name">${planet}</div>
+                        <div class="planet-details">
+                            <strong>Total Shadbala:</strong> ${data.total.toFixed(2)} Shashtiamsas<br>
+                            <strong>In Rupas:</strong> ${strength.toFixed(2)} Rupas<br>
+                            <strong>Minimum Required:</strong> ${minReq.toFixed(1)} Rupas<br>
+                            <strong>Ratio:</strong> ${ratio.toFixed(2)} (${ratio >= 1 ? 'Meets' : 'Below'} requirement)<br>
+                            <strong>Category:</strong> ${category}<br>
+                `;
+                
+                // Ishta and Kashta Phala
+                if (data.ishta_phala !== undefined) {
+                    html += `<strong>Ishta Phala:</strong> ${data.ishta_phala.toFixed(2)}<br>`;
+                    html += `<strong>Kashta Phala:</strong> ${data.kashta_phala.toFixed(2)}<br>`;
+                }
+                
+                html += '<br><strong>Detailed Components:</strong><br>';
+                
+                // Sthana Bala details
+                const sthana = data.components?.sthana_bala;
+                if (sthana && typeof sthana === 'object') {
+                    html += `<details style="margin-top: 5px;"><summary style="cursor: pointer; color: #667eea;">Sthana Bala: ${sthana.total.toFixed(2)}</summary>`;
+                    html += `<div style="margin-left: 15px; margin-top: 5px;">`;
+                    html += `• Uchcha Bala: ${sthana.uchcha_bala.toFixed(2)}<br>`;
+                    html += `• Saptavargaja Bala: ${sthana.saptavargaja_bala.toFixed(2)}<br>`;
+                    html += `• Ojayugmarasyamsa Bala: ${sthana.ojayugmarasyamsa_bala.toFixed(2)}<br>`;
+                    html += `• Kendra Bala: ${sthana.kendra_bala.toFixed(2)}<br>`;
+                    html += `• Drekkana Bala: ${sthana.drekkana_bala.toFixed(2)}<br>`;
+                    html += `</div></details>`;
+                } else {
+                    html += `• Sthana Bala: ${typeof sthana === 'number' ? sthana.toFixed(2) : '0.00'}<br>`;
+                }
+                
+                // Kala Bala details
+                const kala = data.components?.kala_bala;
+                if (kala && typeof kala === 'object') {
+                    html += `<details style="margin-top: 5px;"><summary style="cursor: pointer; color: #667eea;">Kala Bala: ${kala.total.toFixed(2)}</summary>`;
+                    html += `<div style="margin-left: 15px; margin-top: 5px;">`;
+                    html += `• Nathonnatha Bala: ${kala.nathonnatha_bala.toFixed(2)}<br>`;
+                    html += `• Paksha Bala: ${kala.paksha_bala.toFixed(2)}<br>`;
+                    html += `• Tribhaga Bala: ${kala.tribhaga_bala.toFixed(2)}<br>`;
+                    html += `• Abda Bala: ${kala.abda_bala.toFixed(2)}<br>`;
+                    html += `• Masa Bala: ${kala.masa_bala.toFixed(2)}<br>`;
+                    html += `• Vara Bala: ${kala.vara_bala.toFixed(2)}<br>`;
+                    html += `• Hora Bala: ${kala.hora_bala.toFixed(2)}<br>`;
+                    html += `• Ayana Bala: ${kala.ayana_bala.toFixed(2)}<br>`;
+                    html += `• Yuddha Bala: ${kala.yuddha_bala.toFixed(2)}<br>`;
+                    html += `</div></details>`;
+                } else {
+                    html += `• Kala Bala: ${typeof kala === 'number' ? kala.toFixed(2) : '0.00'}<br>`;
+                }
+                
+                // Other components
+                html += `• Dig Bala: ${(data.components?.dig_bala || 0).toFixed(2)}<br>`;
+                html += `• Chesta Bala: ${(data.components?.cheshta_bala || 0).toFixed(2)}<br>`;
+                html += `• Naisargika Bala: ${(data.components?.naisargika_bala || 0).toFixed(2)}<br>`;
+                html += `• Drik Bala: ${(data.components?.drik_bala || 0).toFixed(2)}<br>`;
+                
+                html += `</div></div>`;
+            }
+            
+            html += '</div>';
+            displayDiv.innerHTML = html;
+        }
+
+        async function calculateBhavabala() {
+            if (!currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const displayDiv = document.getElementById('bhavabala-results');
+            displayDiv.innerHTML = '<p style="text-align: center;">Calculating Bhavabala...</p>';
+
+            try {
+                const response = await fetch('/api/calculate-bhavabala', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(currentInputData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayBhavabalaResults(data.bhavabala);
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayBhavabalaResults(bhavabala) {
+            const displayDiv = document.getElementById('bhavabala-results');
+            
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px;">';
+            
+            const houseSignificance = {
+                1: 'Self, Personality, Health',
+                2: 'Wealth, Family, Speech',
+                3: 'Siblings, Courage, Communication',
+                4: 'Mother, Home, Property',
+                5: 'Children, Intelligence, Creativity',
+                6: 'Enemies, Debts, Health Issues',
+                7: 'Spouse, Partnership, Business',
+                8: 'Longevity, Transformation, Occult',
+                9: 'Fortune, Father, Religion',
+                10: 'Career, Status, Authority',
+                11: 'Gains, Friends, Aspirations',
+                12: 'Losses, Expenses, Liberation'
+            };
+            
+            for (let house = 1; house <= 12; house++) {
+                const data = bhavabala[house];
+                if (!data) continue;
+                
+                const strength = data.rupas || 0;
+                const color = strength >= 9 ? '#28a745' : strength >= 7 ? '#6c757d' : strength >= 5 ? '#ffc107' : '#dc3545';
+                
+                html += `
+                    <div class="planet-info" style="border-left: 4px solid ${color};">
+                        <div class="planet-name">House ${house}</div>
+                        <div class="planet-details">
+                            <small style="color: #666;">${houseSignificance[house]}</small><br><br>
+                            <strong>Total Bhavabala:</strong> ${data.total.toFixed(2)} Shashtiamsas<br>
+                            <strong>In Rupas:</strong> ${strength.toFixed(2)} Rupas<br>
+                            <strong>Strength Category:</strong> ${data.strength_category}<br><br>
+                            <strong>Components:</strong><br>
+                            • Bhavadhipati Bala: ${(data.components?.bhavadhipati_bala || 0).toFixed(2)}<br>
+                            • Bhavdig Bala: ${(data.components?.bhavdig_bala || 0).toFixed(2)}<br>
+                            • Bhavdrishti Bala: ${(data.components?.bhavdrishti_bala || 0).toFixed(2)}<br>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            displayDiv.innerHTML = html;
+        }
+
+        async function calculateDasha() {
+            if (!currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const displayDiv = document.getElementById('dasha-results');
+            displayDiv.innerHTML = '<p style="text-align: center;">Calculating Dasha...</p>';
+
+            try {
+                const response = await fetch('/api/calculate-dasha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(currentInputData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayDashaResults(data);
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayDashaResults(data) {
+            const displayDiv = document.getElementById('dasha-results');
+            const current = data.current_dasha;
+            const timeline = data.timeline;
+            
+            let html = `
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #667eea;">Current Dasha Period</h3>
+                    <div class="planet-info">
+                        <div class="planet-name">Mahadasha: ${current.mahadasha.planet}</div>
+                        <div class="planet-details">
+                            From: ${new Date(current.mahadasha.start_date).toLocaleDateString()}<br>
+                            To: ${new Date(current.mahadasha.end_date).toLocaleDateString()}<br>
+                            Duration: ${current.mahadasha.duration_years} years
+                        </div>
+                    </div>
+            `;
+            
+            if (current.antardasha) {
+                html += `
+                    <div class="planet-info" style="margin-top: 10px;">
+                        <div class="planet-name">Antardasha: ${current.antardasha.planet}</div>
+                        <div class="planet-details">
+                            From: ${new Date(current.antardasha.start_date).toLocaleDateString()}<br>
+                            To: ${new Date(current.antardasha.end_date).toLocaleDateString()}<br>
+                            Duration: ${current.antardasha.duration_years} years
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += '</div><h3 style="color: #667eea; margin-top: 30px;">Mahadasha Timeline</h3>';
+            
+            for (const md of timeline.mahadashas) {
+                html += `
+                    <div class="planet-info" style="margin-bottom: 10px;">
+                        <div class="planet-name">${md.planet} Mahadasha</div>
+                        <div class="planet-details">
+                            ${new Date(md.start_date).toLocaleDateString()} - ${new Date(md.end_date).toLocaleDateString()}<br>
+                            Duration: ${md.duration_years} years<br>
+                            <details style="margin-top: 10px;">
+                                <summary style="cursor: pointer; color: #667eea;">View Antardashas</summary>
+                                <div style="margin-top: 10px;">
+                                    ${md.antardashas.map(ad => `
+                                        <div style="padding: 5px; margin: 5px 0; background: #f0f0f0; border-radius: 5px;">
+                                            <strong>${ad.planet}</strong>: ${new Date(ad.start_date).toLocaleDateString()} - ${new Date(ad.end_date).toLocaleDateString()}
+                                            (${ad.duration_years.toFixed(2)} years)
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </details>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            displayDiv.innerHTML = html;
+        }
+
+        async function calculateNakshatraAttributes() {
+            if (!currentInputData) {
+                alert('Please calculate a birth chart first in the Chart Calculator tab');
+                return;
+            }
+
+            const displayDiv = document.getElementById('nakshatra-results');
+            displayDiv.innerHTML = '<p style="text-align: center;">Calculating Nakshatra Attributes...</p>';
+
+            try {
+                const response = await fetch('/api/calculate-nakshatra-attributes', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(currentInputData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayNakshatraResults(data.attributes);
+                } else {
+                    displayDiv.innerHTML = `<p style="color: red;">Error: ${data.error}</p>`;
+                }
+            } catch (error) {
+                displayDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        }
+
+        function displayNakshatraResults(attributes) {
+            const displayDiv = document.getElementById('nakshatra-results');
+            
+            let html = `
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #667eea;">Jaimini Karakas (Planetary Significators)</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+            `;
+            
+            for (const [karaka, data] of Object.entries(attributes.karakas || {})) {
+                html += `
+                    <div class="planet-info">
+                        <div class="planet-name">${karaka}</div>
+                        <div class="planet-details">
+                            <strong>Planet:</strong> ${data.planet}<br>
+                            <strong>Degree:</strong> ${data.degree_in_sign}°<br>
+                            <strong>Significance:</strong> ${data.significance}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `</div></div>`;
+            
+            // Moon Nakshatra Attributes
+            const moon = attributes.moon_nakshatra_attributes || {};
+            if (moon.nakshatra) {
+                html += `
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="color: #667eea;">Moon Nakshatra: ${moon.nakshatra}</h3>
+                        <div class="planet-info">
+                            <div class="planet-details">
+                                <strong>Lord:</strong> ${moon.lord}<br>
+                                <strong>Yoni:</strong> ${moon.yoni.full}<br>
+                                <strong>Gana:</strong> ${moon.gana} (Nature)<br>
+                                <strong>Nadi:</strong> ${moon.nadi} (Dosha)<br>
+                                <strong>Varna:</strong> ${moon.varna} (Caste)<br>
+                                <strong>Tattva:</strong> ${moon.tattva} (Element)<br>
+                                <strong>Deity:</strong> ${moon.deity}<br>
+                                <strong>Symbol:</strong> ${moon.symbol}<br>
+                                <strong>Guna:</strong> ${moon.guna}<br>
+                                <strong>Direction:</strong> ${moon.direction}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Ascendant Nakshatra
+            const asc = attributes.ascendant_nakshatra_attributes || {};
+            if (asc.nakshatra) {
+                html += `
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="color: #667eea;">Ascendant Nakshatra: ${asc.nakshatra}</h3>
+                        <div class="planet-info">
+                            <div class="planet-details">
+                                <strong>Lord:</strong> ${asc.lord}<br>
+                                <strong>Yoni:</strong> ${asc.yoni.full}<br>
+                                <strong>Gana:</strong> ${asc.gana}<br>
+                                <strong>Deity:</strong> ${asc.deity}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             displayDiv.innerHTML = html;
         }
 
